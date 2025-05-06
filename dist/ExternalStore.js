@@ -21,7 +21,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 import { useSyncExternalStore } from "react";
 export var useCursor = function (store) {
     var subscribe = function (listener) { return store.subscribe(listener); };
-    var getSnapshot = function () { return store.getSnapshot(); };
+    var getSnapshot = function () { return store.get(); };
     return useSyncExternalStore(subscribe, getSnapshot);
 };
 var ExternalStore = (function () {
@@ -37,11 +37,15 @@ var ExternalStore = (function () {
             _this.listeners = _this.listeners.filter(function (l) { return l !== listener; });
         };
     };
-    ExternalStore.prototype.getSnapshot = function () {
-        return this.state;
+    ExternalStore.prototype.get = function (fn) {
+        return fn ? fn(this.state) : this.state;
     };
-    ExternalStore.prototype.getBy = function (fn) {
-        return fn(this.state);
+    ExternalStore.prototype.set = function (state) {
+        this.state = state;
+        return this;
+    };
+    ExternalStore.prototype.getSnapshot = function () {
+        return this.get();
     };
     ExternalStore.prototype.update = function (fn) {
         this.state = fn(this.state);
@@ -70,11 +74,12 @@ var ExternalStoreCursor = (function () {
         this.updateAt = updateAt;
         this.listeners = [];
     }
-    ExternalStoreCursor.prototype.getSnapshot = function () {
-        return this.getSnapshotAt(this.cursor.getSnapshot());
+    ExternalStoreCursor.prototype.get = function (fn) {
+        var snapshot = this.getSnapshotAt(this.cursor.get());
+        return fn ? fn(snapshot) : snapshot;
     };
-    ExternalStoreCursor.prototype.getBy = function (fn) {
-        return fn(this.getSnapshotAt(this.cursor.getSnapshot()));
+    ExternalStoreCursor.prototype.set = function (state) {
+        return this.update(function () { return state; });
     };
     ExternalStoreCursor.prototype.update = function (fn) {
         var _this = this;
@@ -83,11 +88,11 @@ var ExternalStoreCursor = (function () {
         });
         return this;
     };
-    ExternalStoreCursor.prototype.subscribe = function (listener) {
+    ExternalStoreCursor.prototype.subscribe = function (listener2) {
         var _this = this;
-        this.listeners = __spreadArray(__spreadArray([], this.listeners, true), [listener], false);
+        this.listeners = __spreadArray(__spreadArray([], this.listeners, true), [listener2], false);
         return function () {
-            _this.listeners = _this.listeners.filter(function (l) { return l !== listener; });
+            _this.listeners = _this.listeners.filter(function (l) { return l !== listener2; });
         };
     };
     ExternalStoreCursor.prototype.push = function () {
