@@ -5,17 +5,18 @@ import { useSyncExternalStore } from "react"
 ///////////////////////////////////////////////////////////////////////////////
 
 export interface Cursor<S> {
-    getSnapshot(): S
+    get(): S
+    get<V>(fn: (state: S) => V): V
+    set(state: S): Cursor<S>
     update(fn: (state: S) => S): Cursor<S>
     push(): void
     subscribe(listener: () => void): () => void
-    getBy<V>(fn: (state: S) => V): V
     createCursorOn<K extends keyof S>(key: K): Cursor<S[K]>
 }
 
 export const useCursor = <S>(store: Cursor<S>) => {
     const subscribe = (listener: () => void) => store.subscribe(listener)
-    const getSnapshot = () => store.getSnapshot()
+    const getSnapshot = () => store.get()
     return useSyncExternalStore(subscribe, getSnapshot)
 }
 
@@ -27,7 +28,7 @@ export class ExternalStore<S> implements Cursor<S> {
     private listeners: (() => void)[] = []
     private state: S
 
-    public constructor(private initState: S) {
+    public constructor(readonly initState: S) {
         this.state = { ...this.initState }
     }
 
@@ -38,12 +39,19 @@ export class ExternalStore<S> implements Cursor<S> {
         }
     }
 
-    public getSnapshot() {
-        return this.state
+    public get(): S;
+    public get<V>(fn: (state: S) => V): V;
+    public get<V>(fn?: (state: S) => V) {
+        return fn ? fn(this.state) : this.state
     }
 
-    public getBy<V>(fn: (state: S) => V): V {
-        return fn(this.state)
+    public set(state: S) {
+        this.state = state
+        return this
+    }
+
+    public getSnapshot() {
+        return this.get()
     }
 
     public update(fn: (state: S) => S) {
@@ -62,8 +70,8 @@ export class ExternalStore<S> implements Cursor<S> {
             (state, newValue): S =>
                 Array.isArray(state)
                     ? (state
-                          .slice()
-                          .map((o, i) => (i === key ? newValue : o)) as S)
+                        .slice()
+                        .map((o, i) => (i === key ? newValue : o)) as S)
                     : { ...state, [key]: newValue }
         )
     }
@@ -80,14 +88,21 @@ export class ExternalStoreCursor<S, SS> implements Cursor<SS> {
         private readonly cursor: Cursor<S>,
         private readonly getSnapshotAt: (state: S) => SS,
         private readonly updateAt: (state: S, subState: SS) => S
-    ) {}
+    ) { }
 
-    public getSnapshot(): SS {
-        return this.getSnapshotAt(this.cursor.getSnapshot())
+    public get(): SS;
+    public get<V>(fn: (state: SS) => V): V;
+    public get<V>(fn?: (state: SS) => V) {
+        const snapshot = this.getSnapshotAt(this.cursor.get())
+        return fn ? fn(snapshot) : snapshot
     }
 
-    public getBy<V>(fn: (state: SS) => V): V {
-        return fn(this.getSnapshotAt(this.cursor.getSnapshot()))
+    public getSnapshot(): SS {
+        return this.get()
+    }
+
+    public set(state: SS) {
+        return this.update(() => state)
     }
 
     public update(fn: (state: SS) => SS) {
@@ -97,10 +112,10 @@ export class ExternalStoreCursor<S, SS> implements Cursor<SS> {
         return this
     }
 
-    public subscribe(listener: () => void) {
-        this.listeners = [...this.listeners, listener]
+    public subscribe(listener2: () => void) {
+        this.listeners = [...this.listeners, listener2]
         return () => {
-            this.listeners = this.listeners.filter((l) => l !== listener)
+            this.listeners = this.listeners.filter((l) => l !== listener2)
         }
     }
 
@@ -115,8 +130,8 @@ export class ExternalStoreCursor<S, SS> implements Cursor<SS> {
             (state, newValue): SS =>
                 Array.isArray(state)
                     ? (state
-                          .slice()
-                          .map((o, i) => (i === key ? newValue : o)) as SS) //!
+                        .slice()
+                        .map((o, i) => (i === key ? newValue : o)) as SS) //!
                     : { ...state, [key]: newValue }
         )
     }
