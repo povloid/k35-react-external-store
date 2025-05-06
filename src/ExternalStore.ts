@@ -97,10 +97,6 @@ export class ExternalStoreCursor<S, SS> implements Cursor<SS> {
         return fn ? fn(snapshot) : snapshot
     }
 
-    public getSnapshot(): SS {
-        return this.get()
-    }
-
     public set(state: SS) {
         return this.update(() => state)
     }

@@ -78,9 +78,6 @@ var ExternalStoreCursor = (function () {
         var snapshot = this.getSnapshotAt(this.cursor.get());
         return fn ? fn(snapshot) : snapshot;
     };
-    ExternalStoreCursor.prototype.getSnapshot = function () {
-        return this.get();
-    };
     ExternalStoreCursor.prototype.set = function (state) {
         return this.update(function () { return state; });
     };

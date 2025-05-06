@@ -30,7 +30,6 @@ export declare class ExternalStoreCursor<S, SS> implements Cursor<SS> {
     constructor(cursor: Cursor<S>, getSnapshotAt: (state: S) => SS, updateAt: (state: S, subState: SS) => S);
     get(): SS;
     get<V>(fn: (state: SS) => V): V;
-    getSnapshot(): SS;
     set(state: SS): this;
     update(fn: (state: SS) => SS): this;
     subscribe(listener2: () => void): () => void;
